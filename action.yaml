@@ -16,6 +16,9 @@ inputs:
   config:
     description: 'GCP Cloud Build configuration file location'
     required: true
+  buildArgs:
+    description: 'multine string or build args with one line per arg as KEY=VALUE'
+    required: false
 outputs:
   image:
     description: "image pushed, same as input.push"
@@ -29,13 +32,12 @@ runs:
       run: |
         set -e
         echo "Trigger Docker build for '${{ inputs.image }}' using configuration '${{ inputs.config }}' and build args : "
+        buildArgs="${{ inputs.buildArgs }}"
         substitutions=""
-        for e in $(printenv); do
-          IFS='=' read -r -a key_val  <<< "$e"
-          name=${key_val[0]}
-          [[ "${name}" != _* ]] && continue
-          [[ "${name}" == '_' ]] && continue
-          substitutions="${substitutions}${name}=${key_val[1]},"
+        for buildArg in ${buildArgs}; do
+          echo "--- $buildArg"
+          # the underscore and the comma are required to make it a valid Cloudbuild subsitution
+          substitutions="${substitutions}_${buildArg},"
         done
         echo $substitutions
 
@@ -46,4 +48,3 @@ runs:
         set +x
 
         echo "::set-output name=image::${{ inputs.image }}"
-
