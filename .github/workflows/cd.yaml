@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - master
+      - remi/support_simple_build_configuration
 
 jobs:
   CreateUpdateGitTag:

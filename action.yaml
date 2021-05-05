@@ -8,16 +8,22 @@ name: 'Build and Push Docker images'
 description: 'Build and Push Docker images via CloudBuild running Kaniko for multi stage cache'
 inputs:
   image:
-    description: 'full Docker image/tag to push'
-    required: true
+    description: 'full Docker image/tag to push, required if cacheRepo or config'
+    required: false
   cacheRepo:
     description: 'Docker repository to use as cache'
     required: true
   config:
-    description: 'GCP Cloud Build configuration file location'
-    required: true
+    description: 'GCP Cloud Build configuration file location, required if image or cacheRepo'
+    required: false
   buildArgs:
     description: 'multine string or build args with one line per arg as KEY=VALUE'
+    required: false
+  context:
+    description: 'docker context, default to .'
+    required: false
+  dockerfile:
+    description: 'dockerfile, default to Dockerfile if context is set'
     required: false
 outputs:
   image:
@@ -30,21 +36,85 @@ runs:
       id: build
       shell: bash
       run: |
-        set -e
-        echo "Trigger Docker build for '${{ inputs.image }}' using configuration '${{ inputs.config }}' and build args : "
-        buildArgs="${{ inputs.buildArgs }}"
-        substitutions=""
-        for buildArg in ${buildArgs}; do
-          echo "--- $buildArg"
-          # the underscore and the comma are required to make it a valid Cloudbuild subsitution
-          substitutions="${substitutions}_${buildArg},"
-        done
-        echo $substitutions
-
         set -x
-        gcloud --project zenhub-ops builds submit . --gcs-source-staging-dir=gs://ops-cloudbuild-bucket/data --gcs-log-dir=gs://ops-cloudbuild-bucket/logs \
-           --config ${{ inputs.config }} \
-           --substitutions _CACHE_REPO=${{ inputs.cacheRepo }},_IMAGE=${{ inputs.image }},${substitutions}
+
+        context='.'
+        [[ "${{ inputs.context }}" != "" ]] && context=${{ inputs.context }}
+
+        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]]; then
+          dockerfile=Dockerfile
+          [[ "${{ inputs.dockerfile }}" != "" ]] && dockerfile=${{ inputs.dockerfile }}
+
+          echo "Trigger Docker build for '${image}' using context '${context}' and Dockerfile '${dockerfile}': "
+          echo "(no support for build args)"
+
+          config=/tmp/cloubuild.yaml
+          substitutions="${substitutions}_DOCKERFILE=${dockerfile},"
+
+          registry_repository=$(cat ${context}/push_image)
+          version=$(cat ${context}/version)
+          image=${registry_repository}:${version}
+          cacheRepo=${registry_repository}/cache
+
+          cat <<EOF > /tmp/cloubuild.yaml
+        substitutions:
+          _IMAGE:
+          _CACHE_REPO:
+          _DOCKERFILE:
+        steps:
+          - name: 'gcr.io/kaniko-project/executor:v1.2.0'
+            args: # https://github.com/GoogleContainerTools/kaniko#additional-flags
+              - --destination=\$_IMAGE
+              - --cache-repo=\$_CACHE_REPO
+              - --dockerfile=\$_DOCKERFILE
+              - --cache=true
+              - --digest-file=/dev/termination-log
+        EOF
+        elif [[ "${{ inputs.config }}" != "" ]] && \
+             [[ "${{ inputs.image }}" != "" ]]; then
+          echo "Trigger Docker build for '${image}' using configuration '${{ inputs.config }}' and build args : "
+          buildArgs="${{ inputs.buildArgs }}"
+          substitutions=""
+          for buildArg in ${buildArgs}; do
+            echo "--- $buildArg"
+            # the underscore and the comma are required to make it a valid Cloudbuild subsitution
+            substitutions="${substitutions}_${buildArg},"
+          done
+          echo $substitutions
+
+          config="${{ inputs.config }}"
+          image="${{ inputs.image }}"
+          cacheRepo="${{ inputs.cacheRepo }}"
+
+        else
+          echo "config error"
+          exit 1
+        fi
+
+        echo "Using Gcloud config :"
+        cat ${config}
+        set -x
+        gcloud --project zenhub-ops builds submit ${context} --gcs-source-staging-dir=gs://ops-cloudbuild-bucket/data --gcs-log-dir=gs://ops-cloudbuild-bucket/logs \
+           --config ${config} \
+           --substitutions _CACHE_REPO=${cacheRepo},_IMAGE=${image},${substitutions}
         set +x
 
-        echo "::set-output name=image::${{ inputs.image }}"
+        echo "::set-output name=image::${image}"
+
+        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]]; then
+          git config --global user.email "devops@zenhub.com"
+          git config --global user.name "DevOps CI"
+
+          note=$(cat ${context}/release_note || true)
+          echo ".. delete tag $version.. (errors means it doesn't exist)"
+          git fetch --tags
+          git tag -d $version || true
+          git push --delete origin $version || true
+
+          echo " .. add tag $version"
+          git tag -a -m "$note" $version
+          git push --follow-tags
+        else
+          echo "release is not supported when using config key"
+        fi
+
