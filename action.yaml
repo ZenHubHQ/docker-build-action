@@ -121,6 +121,6 @@ runs:
           git tag -a -m "$note" $version
           git push --follow-tags
         else
-          echo "release is not supported when using config key"
+          echo "release is not supported when using config key/or disabled"
         fi
 
