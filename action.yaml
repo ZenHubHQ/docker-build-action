@@ -25,6 +25,9 @@ inputs:
   dockerfile:
     description: 'dockerfile, default to Dockerfile if context is set'
     required: false
+  create_git_tag:
+    description: 'should we create git tag with this release? default to true'
+    required: false
 outputs:
   image:
     description: "image pushed, same as input.push"
@@ -40,6 +43,9 @@ runs:
 
         context='.'
         [[ "${{ inputs.context }}" != "" ]] && context=${{ inputs.context }}
+
+        create_git_tag=true
+        [[ "${{ inputs.create_git_tag }}" != "" ]] && create_git_tag=${{ inputs.create_git_tag }}
 
         if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]]; then
           dockerfile=Dockerfile
@@ -101,7 +107,7 @@ runs:
 
         echo "::set-output name=image::${image}"
 
-        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]]; then
+        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]] && [[ "${{ create_git_tag }}" == true ]]; then
           git config --global user.email "devops@zenhub.com"
           git config --global user.name "DevOps CI"
 
