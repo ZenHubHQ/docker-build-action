@@ -105,7 +105,7 @@ runs:
 
         echo "::set-output name=image::${image}"
 
-        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]] && [[ "${createGitTag}" == 'true' ]]; then
+        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]] && [[ "${{ inputs.createGitTag }}" == 'true' ]]; then
           git config --global user.email "devops@zenhub.com"
           git config --global user.name "DevOps CI"
 
