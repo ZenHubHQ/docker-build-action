@@ -25,6 +25,10 @@ inputs:
   dockerfile:
     description: 'dockerfile, default to Dockerfile if context is set'
     required: false
+  createGitTag:
+    description: '(only context build) should we create git tag with this release? default to true'
+    required: false
+    default: 'true'
 outputs:
   image:
     description: "image pushed, same as input.push"
@@ -101,7 +105,7 @@ runs:
 
         echo "::set-output name=image::${image}"
 
-        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]]; then
+        if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]] && [[ "${{ inputs.createGitTag }}" == 'true' ]]; then
           git config --global user.email "devops@zenhub.com"
           git config --global user.name "DevOps CI"
 
@@ -115,6 +119,6 @@ runs:
           git tag -a -m "$note" $version
           git push --follow-tags
         else
-          echo "release is not supported when using config key"
+          echo "release is not supported when using config key/or disabled"
         fi
 

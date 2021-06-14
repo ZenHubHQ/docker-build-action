@@ -1,3 +1,1 @@
-Support build without cloudbuild configuration
-* remove need to specify a cloudbuild config file
-* no support for build args yet
+Enable optional tag creation for context builds.
