@@ -26,8 +26,9 @@ inputs:
     description: 'dockerfile, default to Dockerfile if context is set'
     required: false
   createGitTag:
-    description: 'should we create git tag with this release? default to true'
+    description: '(only context build) should we create git tag with this release? default to true'
     required: false
+    default: 'true'
 outputs:
   image:
     description: "image pushed, same as input.push"
@@ -43,9 +44,6 @@ runs:
 
         context='.'
         [[ "${{ inputs.context }}" != "" ]] && context=${{ inputs.context }}
-
-        createGitTag='true'
-        [[ "${{ inputs.createGitTag }}" != "" ]] && createGitTag=${{ inputs.createGitTag }}
 
         if [[ "${{ inputs.dockerfile }}" != "" ]] || [[ "${{ inputs.context }}" != "" ]]; then
           dockerfile=Dockerfile
