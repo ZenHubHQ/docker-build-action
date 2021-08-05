@@ -34,6 +34,7 @@ runs:
         echo "Trigger Docker build for '${{ inputs.image }}' using configuration '${{ inputs.config }}' and build args : "
         buildArgs="${{ inputs.buildArgs }}"
         substitutions=""
+        IFS=$'\n'
         for buildArg in ${buildArgs}; do
           echo "--- $buildArg"
           # the underscore and the comma are required to make it a valid Cloudbuild subsitution
