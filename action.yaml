@@ -46,6 +46,7 @@ runs:
         gcloud --project zenhub-ops builds submit . --gcs-source-staging-dir=gs://ops-cloudbuild-bucket/data --gcs-log-dir=gs://ops-cloudbuild-bucket/logs \
            --config ${{ inputs.config }} \
            --timeout 1h \
+           --compressed-caching=false \
            --substitutions _CACHE_REPO=${{ inputs.cacheRepo }},_IMAGE=${{ inputs.image }},${substitutions}
         set +x
 
