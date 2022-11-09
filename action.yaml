@@ -49,4 +49,4 @@ runs:
            --substitutions _CACHE_REPO=${{ inputs.cacheRepo }},_IMAGE=${{ inputs.image }},${substitutions}
         set +x
 
-        echo "::set-output name=image::${{ inputs.image }}"
+        echo "image=${{ inputs.image }}" >> $GITHUB_OUTPUT
