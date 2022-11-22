@@ -116,6 +116,7 @@ runs:
           git push --delete origin $version || true
 
           echo " .. add tag $version"
+          git pull
           git tag -a -m "$note" $version
           git push --follow-tags
         else
