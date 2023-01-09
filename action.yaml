@@ -66,12 +66,14 @@ runs:
           _CACHE_REPO:
           _DOCKERFILE:
         steps:
-          - name: 'gcr.io/kaniko-project/executor:v1.6.0'
+          - name: 'gcr.io/kaniko-project/executor:v1.9.1'
             args: # https://github.com/GoogleContainerTools/kaniko#additional-flags
               - --destination=\$_IMAGE
               - --cache-repo=\$_CACHE_REPO
               - --dockerfile=\$_DOCKERFILE
               - --cache=true
+              - --compressed-caching=false
+              - --image-fs-extract-retry=3
               - --digest-file=/dev/termination-log
         EOF
         elif [[ "${{ inputs.config }}" != "" ]] && \
